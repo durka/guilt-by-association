@@ -2,8 +2,8 @@
 
 guilty!{
     trait Trait {
-        const WithDefault: i32 = 0;
-        const NoDefault: Self;
+        const WithDefault: i32 = 0,
+        const NoDefault: Self,
 
         fn with_impl(&self) -> &Self { self }
         fn no_impl(&self) -> &Self;
@@ -15,8 +15,8 @@ struct Struct { i: i32 }
 
 guilty!{
     impl Trait for Struct {
-        const WithDefault: i32 = 42;
-        const NoDefault: Self = Struct { i: 42 };
+        const WithDefault: i32 = 42,
+        const NoDefault: Self = Struct { i: 42 },
 
         fn no_impl(&self) -> &Self { self }
     }
