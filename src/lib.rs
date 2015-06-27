@@ -1,19 +1,62 @@
+/// Macro for declaring/implementing traits with fake associated consts (in stable Rust)
+///
+/// Currently very fragile in terms of syntax: does not support traits/impls with _any_ kind of
+/// generic parameters (either lifetimes or types).
+///
+/// The same macro is used for declaring a trait with associated consts, implementing such a trait,
+/// and accessing the consts.
+///
+/// The syntax is the same as that proposed for associated consts, _except_ that: - all consts must
+/// be at the beginning of the trait/impl, before any functions - const declarations end with a
+/// comma, instead of a semicolon (this is due to a limitation of the macro system -- a type
+/// followed by a semicolon is for some reason not parseable)
+///
+/// See the tests for example usage.
+///
+/// At the moment they are not consts at all -- they simply expand to static functions with the
+/// same name as the declared const. You may therefore access the const by calling
+/// `Trait::CONST()`, or (for future proofing, in case the macro implementation changes), call the
+/// macro again to access the const, as `guilty!(Trait::CONST)`.
 #[macro_export]
 macro_rules! guilty {
+    // These are the user facing invocations:
+    
+    // FIXME what if the traits have docs/attributes?
+    // 1. define a private trait
     (trait $traitname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE TRAIT, [trait $traitname], $body);
     };
+    // 2. define a public trait
     (pub trait $traitname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE TRAIT, [pub trait $traitname], $body);
     };
+    // 3. implement a trait (public or private)
     (impl $traitname:ident for $structname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE IMPL, $traitname, $structname, $body);
     };
+    // 4. access a const declared with this macro
     ($structname:ident :: $constname:ident) => {
         guilty!(INTERNAL: ACCESS CONST, $structname, $constname);
     };
 
+    // Following are the internal macro calls
+    // Since you can't export a macro which calls other unexported macros, guilty! calls itself
+    // recursively in order to continue parsing. The invocation syntax for all these recursive
+    // calls starts with the tokens `INTERNAL:`.
+    //
+    // The general strategy for parsing these declarations is we parse one const declaration from
+    // the beginning of the trait/impl at a time, turning it into a static function which is
+    // appended to the end of the trait/impl. When there are no more consts, the recursion stops
+    // and the trait/impl is outputted (with an indirection through AS ITEM to appease the parser).
 
+
+    // 1. parse a trait with a const (that has a default value) as the first declaration
+    // the square brackets contain [trait Trait] or [pub trait Trait]
+    // this calls on to:
+    //  - itself if there is another default-valued const
+    //  - #2 if there is another const with no default value
+    //  - #3 if there are no more consts
+    // FIXME what if the const has docs/attributes?
     (INTERNAL: DEFINE TRAIT, [$($traitname:ident)+],
      {
          const $constname:ident : $consttype:ty = $constdefault:expr,
@@ -25,6 +68,11 @@ macro_rules! guilty {
                     #[allow(non_snake_case)] fn $constname() -> $consttype { $constdefault }
                 });
     };
+    // 2. parse a trait with a const (that has no default value) as the first declaration
+    // this calls on to:
+    //  - itself is there is another non-default-valued const
+    //  - #1 if there is another default-valued const
+    //  - #3 if there are no more consts
     (INTERNAL: DEFINE TRAIT, [$($traitname:ident)+],
      {
          const $constname:ident : $consttype:ty,
@@ -36,12 +84,16 @@ macro_rules! guilty {
                     #[allow(non_snake_case)] fn $constname() -> $consttype;
                 });
     };
+    // 3. output a trait that has no consts at the beginning (starts with an unadorned fn)
     (INTERNAL: DEFINE TRAIT, [$($traitname:ident)+],
      {
          fn $($body:tt)*
      }) => {
         guilty!(INTERNAL: AS ITEM, $($traitname)+ { fn $($body)* });
     };
+    // 4. output a trait that has no consts at the beginning (starts with fn that has
+    //    docs/attributes)
+    // indirection through #9
     (INTERNAL: DEFINE TRAIT, [$($traitname:ident)+],
      {
          # $($body:tt)*
@@ -49,6 +101,10 @@ macro_rules! guilty {
         guilty!(INTERNAL: AS ITEM, $($traitname)+ { # $($body)* });
     };
 
+    // 5. parse an impl with a const as the first declaration
+    // calls on to:
+    //  - itself if there is another const
+    //  - #6 if there are no more consts
     (INTERNAL: DEFINE IMPL, $traitname:ident, $structname:ident,
      {
          const $constname:ident : $consttype:ty = $constvalue:expr,
@@ -60,17 +116,26 @@ macro_rules! guilty {
                     fn $constname() -> $consttype { $constvalue }
                 });
     };
+    // 6. output an impl that has no consts at the beginning
+    // indirection through #9
     (INTERNAL: DEFINE IMPL, $traitname:ident, $structname:ident,
      {
          fn $($body:tt)*
      }) => {
         guilty!(INTERNAL: AS ITEM, impl $traitname for $structname { fn $($body)* });
     };
+    // FIXME: need a #7 that's like #4?
 
+    // 8. access a const defined with this macro
+    // For now, it just calls the function, since we turn consts into functions. In the future, it
+    // might do something more clever if the implementation changes.
     (INTERNAL: ACCESS CONST, $structname:ident, $constname:ident) => {{
         $structname :: $constname ()
     }};
 
+    // 9. Item redirection.
+    // For some reason the parser sometimes complains "expected item" when you are trying to output
+    // a perfectly good item. The solution (sometimes) is to redirect through a macro like this.
     (INTERNAL: AS ITEM, $i:item) => ($i)
 }
 
@@ -99,20 +164,20 @@ impl Trait for Struct {
  * AFTER
  *
 trait Trait {
-    #[allow(non_snake_case)] fn WithDefault() -> i32 { 0 }
-    #[allow(non_snake_case)] fn NoDefault() -> Self;
-
     fn with_impl(&self) -> &Self { self }
     fn no_impl(&self) -> &Self;
+
+    #[allow(non_snake_case)] fn WithDefault() -> i32 { 0 }
+    #[allow(non_snake_case)] fn NoDefault() -> Self;
 }
 
 struct Struct { i: i32 }
 
 impl Trait for Struct {
+    fn no_impl(&self) -> &Self { self }
+
     fn WithDefault() -> i32 { 42 }
     fn NoDefault() -> Self { Struct { i: 42 } }
-
-    fn no_impl(&self) -> &Self { self }
 }
 */
 
