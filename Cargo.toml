@@ -1,4 +1,12 @@
 [package]
 name = "guilt-by-association"
 version = "0.1.0"
-authors = ["Alex Burka <aburka@seas.upenn.edu>"]
+authors = ["Alex Burka <rust@alexburka.com>"]
+
+description = "Macro for declaring/implementing traits with fake associated consts (in stable Rust)"
+homepage = "https://github.com/durka/guilt-by-association"
+repository = "https://github.com/durka/guilt-by-association"
+readme = "README.md"
+license = "MIT"
+keywords = ["associated", "const", "constant"]
+

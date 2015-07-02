@@ -1,22 +1,27 @@
-/// Macro for declaring/implementing traits with fake associated consts (in stable Rust)
+//! Macro for declaring/implementing traits with fake associated consts (in stable Rust)
+//!
+//! Currently very fragile in terms of syntax: does not support traits/impls with _any_ kind of
+//! generic parameters (either lifetimes or types).
+//!
+//! The same macro is used for declaring a trait with associated consts, implementing such a trait,
+//! and accessing the consts.
+//!
+//! The syntax is the same as that proposed for associated consts, _except_ that:
+//!
+//! - all consts must be at the beginning of the trait/impl, before any functions
+//! - const declarations end with a comma, instead of a semicolon (this is due to a limitation of
+//! the macro system -- a type followed by a semicolon is for some reason not parseable)
+//!
+//! See the tests for example usage.
+//!
+//! At the moment they are not consts at all -- they simply expand to static functions with the
+//! same name as the declared const. You may therefore access the const by calling
+//! `Trait::CONST()`, or (for future proofing, in case the macro implementation changes), call the
+//! macro again to access the const, as `guilty!(Trait::CONST)`.
+
+/// Macro for declaring/implementing traits with fake associated consts
 ///
-/// Currently very fragile in terms of syntax: does not support traits/impls with _any_ kind of
-/// generic parameters (either lifetimes or types).
-///
-/// The same macro is used for declaring a trait with associated consts, implementing such a trait,
-/// and accessing the consts.
-///
-/// The syntax is the same as that proposed for associated consts, _except_ that: - all consts must
-/// be at the beginning of the trait/impl, before any functions - const declarations end with a
-/// comma, instead of a semicolon (this is due to a limitation of the macro system -- a type
-/// followed by a semicolon is for some reason not parseable)
-///
-/// See the tests for example usage.
-///
-/// At the moment they are not consts at all -- they simply expand to static functions with the
-/// same name as the declared const. You may therefore access the const by calling
-/// `Trait::CONST()`, or (for future proofing, in case the macro implementation changes), call the
-/// macro again to access the const, as `guilty!(Trait::CONST)`.
+/// See the [crate-level documentation](index.html) for more.
 #[macro_export]
 macro_rules! guilty {
     // These are the user facing invocations:
