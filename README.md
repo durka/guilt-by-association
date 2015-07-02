@@ -2,3 +2,5 @@ This package defines a macro that approximates the syntax for associated consts 
 
 This package will be irrelevant after September 2015, assuming associated consts get stabilized when Rust 1.3-stable is released.
 
+For documentation, run `cargo doc`.
+
