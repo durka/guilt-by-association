@@ -5,6 +5,8 @@ guilty!{
         const WithDefault: i32 = 0,
         const NoDefault: Self,
 
+        type Type;
+
         fn with_impl(&self) -> &Self { self }
         fn no_impl(&self) -> &Self;
     }
@@ -17,6 +19,8 @@ guilty!{
     impl Trait for Struct {
         const WithDefault: i32 = 42,
         const NoDefault: Self = Struct { i: 42 },
+        
+        type Type = bool;
 
         fn no_impl(&self) -> &Self { self }
     }
