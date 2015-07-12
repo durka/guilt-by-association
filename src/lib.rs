@@ -28,12 +28,12 @@ macro_rules! guilty {
     
     // FIXME what if the traits have docs/attributes?
     // 1. define a private trait
-    (trait $traitname:ident $body:tt) => {
-        guilty!(INTERNAL: DEFINE TRAIT, [trait $traitname], $body);
+    ($(#[$attr:meta])* trait $traitname:ident $body:tt) => {
+        guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [trait] [$traitname], $body);
     };
     // 2. define a public trait
-    (pub trait $traitname:ident $body:tt) => {
-        guilty!(INTERNAL: DEFINE TRAIT, [pub trait $traitname], $body);
+    ($(#[$attr:meta])* pub trait $traitname:ident $body:tt) => {
+        guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [pub trait] [$traitname], $body);
     };
     // 3. implement a trait (public or private)
     (impl $traitname:ident for $structname:ident $body:tt) => {
@@ -62,12 +62,12 @@ macro_rules! guilty {
     //  - parse-trait-nodefconst if there is another const with no default value
     //  - def-trait-fn/def-trait-attr/def-trait-ty if there are no more consts
     // FIXME what if the const has docs/attributes?
-    (INTERNAL: DEFINE TRAIT, [$($traitname:ident)+],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
          const $constname:ident : $consttype:ty = $constdefault:expr,
          $($body:tt)*
      }) => {
-        guilty!(INTERNAL: DEFINE TRAIT, [$($traitname)+],
+        guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [$($before)+] [$($traitname)*],
                 {
                     $($body)*
                     #[allow(non_snake_case)] fn $constname() -> $consttype { $constdefault }
@@ -78,12 +78,12 @@ macro_rules! guilty {
     //  - itself is there is another non-default-valued const
     //  - parse-trait-defconst if there is another default-valued const
     //  - def-trait-fn/def-trait-attr/def-trait-ty if there are no more consts
-    (INTERNAL: DEFINE TRAIT, [$($traitname:ident)+],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
          const $constname:ident : $consttype:ty,
          $($body:tt)*
      }) => {
-        guilty!(INTERNAL: DEFINE TRAIT, [$($traitname)+],
+        guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [$($before)+] [$($traitname)*],
                 {
                     $($body)*
                     #[allow(non_snake_case)] fn $constname() -> $consttype;
@@ -91,35 +91,35 @@ macro_rules! guilty {
     };
     // def-trait-fn: output a trait that has no consts at the beginning (starts with an unadorned fn)
     // indirection through item-redir
-    (INTERNAL: DEFINE TRAIT, [$($traitname:ident)+],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
          fn $($body:tt)*
      }) => {
-        guilty!(INTERNAL: AS ITEM, $($traitname)+ { fn $($body)* });
+        guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { fn $($body)* });
     };
     // def-trait-attr: output a trait that has no consts at the beginning (starts with fn that has
     //    docs/attributes)
     // indirection through item-redir
-    (INTERNAL: DEFINE TRAIT, [$($traitname:ident)+],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
          # $($body:tt)*
      }) => {
-        guilty!(INTERNAL: AS ITEM, $($traitname)+ { # $($body)* });
+        guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { # $($body)* });
     };
     // def-trait-ty: output a trait that has no consts at the beginning (starts with an associated type)
     // indirection through item-redir
-    (INTERNAL: DEFINE TRAIT, [$($traitname:ident)+],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
          type $($body:tt)*
      }) => {
-        guilty!(INTERNAL: AS ITEM, $($traitname)+ { type $($body)* });
+        guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { type $($body)* });
     };
 
     // parse-impl-const: parse an impl with a const as the first declaration
     // calls on to:
     //  - itself if there is another const
     //  - def-impl-fn/def-impl-ty if there are no more consts
-    (INTERNAL: DEFINE IMPL, $traitname:ident, $structname:ident,
+    (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
      {
          const $constname:ident : $consttype:ty = $constvalue:expr,
          $($body:tt)*
@@ -132,7 +132,7 @@ macro_rules! guilty {
     };
     // def-impl-fn: output an impl that has no consts at the beginning (starts with fn)
     // indirection through item-redir
-    (INTERNAL: DEFINE IMPL, $traitname:ident, $structname:ident,
+    (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
      {
          fn $($body:tt)*
      }) => {
@@ -140,7 +140,7 @@ macro_rules! guilty {
     };
     // def-impl-ty: output an impl that has no consts at the beginning (starts with type)
     // indirection through item-redir
-    (INTERNAL: DEFINE IMPL, $traitname:ident, $structname:ident,
+    (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
      {
          type $($body:tt)*
      }) => {
