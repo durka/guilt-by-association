@@ -31,15 +31,23 @@ macro_rules! guilty {
     ($(#[$attr:meta])* trait $traitname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [trait] [$traitname], $body);
     };
-    // 2. define a public trait
+    // 2. define a private trait with inheritance
+    ($(#[$attr:meta])* trait $traitname:ident : $parent:ident $body:tt) => {
+        guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [pub trait] [$traitname : $parent], $body);
+    };
+    // 3. define a public trait
     ($(#[$attr:meta])* pub trait $traitname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [pub trait] [$traitname], $body);
     };
-    // 3. implement a trait (public or private)
+    // 4. define a public trait with inheritance
+    ($(#[$attr:meta])* pub trait $traitname:ident : $parent:ident $body:tt) => {
+        guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [pub trait] [$traitname : $parent], $body);
+    };
+    // 5. implement a trait (public or private)
     (impl $traitname:ident for $structname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE IMPL, $traitname, $structname, $body);
     };
-    // 4. access a const declared with this macro
+    // 6. access a const declared with this macro
     ($structname:ident :: $constname:ident) => {
         guilty!(INTERNAL: ACCESS CONST, $structname, $constname);
     };
