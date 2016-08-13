@@ -1,6 +1,6 @@
 [package]
 name = "guilt-by-association"
-version = "0.2.1-test"
+version = "0.3.0"
 authors = ["Alex Burka <rust@alexburka.com>"]
 
 description = "Macro for declaring/implementing traits with fake associated consts (in stable Rust)"

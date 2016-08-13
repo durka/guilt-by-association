@@ -19,6 +19,8 @@
 //! `Trait::CONST()`, or (for future proofing, in case the macro implementation changes), call the
 //! macro again to access the const, as `guilty!(Trait::CONST)`.
 
+#![no_std]
+
 /// Macro for declaring/implementing traits with fake associated consts
 ///
 /// See the [crate-level documentation](index.html) for more.
