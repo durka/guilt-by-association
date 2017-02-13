@@ -76,7 +76,7 @@ macro_rules! guilty {
     //  - def-trait-fn/def-trait-attr/def-trait-ty if there are no more consts
     (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
-         $(#[$cattr:meta])* const $constname:ident : $consttype:ty = $constdefault:expr,
+         $(#[$cattr:meta])* const $constname:ident : $consttype:ty = $constdefault:expr;
          $($body:tt)*
      }) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [$($before)+] [$($traitname)*],
@@ -92,7 +92,7 @@ macro_rules! guilty {
     //  - def-trait-fn/def-trait-attr/def-trait-ty if there are no more consts
     (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
-         $(#[$cattr:meta])* const $constname:ident : $consttype:ty,
+         $(#[$cattr:meta])* const $constname:ident : $consttype:ty;
          $($body:tt)*
      }) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [$($before)+] [$($traitname)*],
@@ -139,7 +139,7 @@ macro_rules! guilty {
     //  - def-impl-fn/def-impl-ty if there are no more consts
     (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
      {
-         $(#[$cattr:meta])* const $constname:ident : $consttype:ty = $constvalue:expr,
+         $(#[$cattr:meta])* const $constname:ident : $consttype:ty = $constvalue:expr;
          $($body:tt)*
      }) => {
         guilty!(INTERNAL: DEFINE IMPL, $traitname, $structname,
@@ -190,18 +190,18 @@ mod tests {
     guilty! { trait Empty { } }
     guilty! { trait JustFn { fn foo(&self); } }
     guilty! { trait JustType { type Foo; } }
-    guilty! { trait JustConst { const FOO: (), } }
+    guilty! { trait JustConst { const FOO: (); } }
     guilty! { trait DocFn { #[doc="bar"] fn foo(&self); } }
     guilty! { trait DocType { #[doc="bar"] type Foo; } }
-    guilty! { trait DocConst { #[doc="bar"] const FOO: (), } }
+    guilty! { trait DocConst { #[doc="bar"] const FOO: (); } }
     struct Foo;
     guilty! { impl Empty for Foo { } }
     guilty! { impl JustFn for Foo { fn foo(&self) {} } }
     guilty! { impl JustType for Foo { type Foo = (); } }
-    guilty! { impl JustConst for Foo { const FOO: () = (), } }
+    guilty! { impl JustConst for Foo { const FOO: () = (); } }
     guilty! { impl DocFn for Foo { #[doc="bar"] fn foo(&self) {} } }
     guilty! { impl DocType for Foo { #[doc="bar"] type Foo = (); } }
-    guilty! { impl DocConst for Foo { #[doc="bar"] const FOO: () = (), } }
+    guilty! { impl DocConst for Foo { #[doc="bar"] const FOO: () = (); } }
 
     #[test]
     fn small() {
@@ -216,9 +216,9 @@ mod tests {
         /// A trait for things that do stuff
         trait Trait {
             /// An associated const with a default
-            const WithDefault: i32 = 0,
+            const WithDefault: i32 = 0;
             /// An associated const without a default
-            const NoDefault: Self,
+            const NoDefault: Self;
 
             /// An associated type
             type Type;
@@ -236,9 +236,9 @@ mod tests {
     guilty! {
         impl Trait for Struct {
             /// An associated const with a default
-            const WithDefault: i32 = 42,
+            const WithDefault: i32 = 42;
             /// An associated const without a default
-            const NoDefault: Self = Struct { i: 42 },
+            const NoDefault: Self = Struct { i: 42 };
             
             /// An associated type
             type Type = bool;
@@ -272,8 +272,8 @@ mod tests {
  * BEFORE
  *
 trait Trait {
-    const WithDefault: i32 = 0,
-    const NoDefault: Self,
+    const WithDefault: i32 = 0;
+    const NoDefault: Self;
 
     fn with_impl(&self) -> &Self { self }
     fn no_impl(&self) -> &Self;
@@ -282,8 +282,8 @@ trait Trait {
 struct Struct { i: i32 }
 
 impl Trait for Struct {
-    const WithDefault: i32 = 42,
-    const NoDefault: Self = Self { i: 42 },
+    const WithDefault: i32 = 42;
+    const NoDefault: Self = Self { i: 42 };
 
     fn no_impl(&self) -> &Self { self }
 }
