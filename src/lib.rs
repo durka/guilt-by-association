@@ -9,8 +9,6 @@
 //! The syntax is the same as that proposed for associated consts, _except_ that:
 //!
 //! - all consts must be at the beginning of the trait/impl, before any functions
-//! - const declarations end with a comma, instead of a semicolon (this is due to a limitation of
-//! the macro system -- a type followed by a semicolon is for some reason not parseable)
 //!
 //! See the tests for example usage.
 //!
