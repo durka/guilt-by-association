@@ -41,5 +41,7 @@ fn test() {
     assert_eq!(TypeId::of::<<Struct as Trait>::Type>(), TypeId::of::<bool>());
     assert_eq!(guilty!(Struct::WithDefault),            42);
     assert_eq!(guilty!(Struct::NoDefault),              Struct { i: 42 });
+    assert_eq!(guilty!(<Struct as Trait>::WithDefault), 42);
+    assert_eq!(guilty!(<Struct as Trait>::NoDefault),   Struct { i: 42 });
 }
 

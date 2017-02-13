@@ -49,9 +49,13 @@ macro_rules! guilty {
     (impl $traitname:ident for $structname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE IMPL, $traitname, $structname, $body);
     };
-    // 6. access a const declared with this macro
+    // 6a. access a const declared with this macro (mentioning trait)
+    (<$structname:ident as $traitname:ident> :: $constname:ident) => {
+        guilty!(INTERNAL: ACCESS CONST, (<$structname as $traitname>), $constname);
+    };
+    // 6b. access a const declared with this macro (w/o mentioning trait)
     ($structname:ident :: $constname:ident) => {
-        guilty!(INTERNAL: ACCESS CONST, $structname, $constname);
+        guilty!(INTERNAL: ACCESS CONST, ($structname), $constname);
     };
 
     // Following are the internal macro calls
@@ -161,8 +165,8 @@ macro_rules! guilty {
     // access: access a const defined with this macro
     // For now, it just calls the function, since we turn consts into functions. In the future, it
     // might do something more clever if the implementation changes.
-    (INTERNAL: ACCESS CONST, $structname:ident, $constname:ident) => {{
-        $structname :: $constname ()
+    (INTERNAL: ACCESS CONST, ($($structname:tt)*), $constname:ident) => {{
+        $($structname)* :: $constname ()
     }};
 
     // item-redir: Item redirection.
