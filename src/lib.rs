@@ -19,7 +19,7 @@
 //! `Trait::CONST()`, or (for future proofing, in case the macro implementation changes), call the
 //! macro again to access the const, as `guilty!(Trait::CONST)`.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 /// Macro for declaring/implementing traits with fake associated consts
 ///
@@ -28,7 +28,6 @@
 macro_rules! guilty {
     // These are the user facing invocations:
     
-    // FIXME what if the traits have docs/attributes?
     // 1. define a private trait
     ($(#[$attr:meta])* trait $traitname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [trait] [$traitname], $body);
@@ -75,16 +74,15 @@ macro_rules! guilty {
     //  - itself if there is another default-valued const
     //  - parse-trait-nodefconst if there is another const with no default value
     //  - def-trait-fn/def-trait-attr/def-trait-ty if there are no more consts
-    // FIXME what if the const has docs/attributes?
     (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
-         const $constname:ident : $consttype:ty = $constdefault:expr,
+         $(#[$cattr:meta])* const $constname:ident : $consttype:ty = $constdefault:expr,
          $($body:tt)*
      }) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [$($before)+] [$($traitname)*],
                 {
                     $($body)*
-                    #[allow(non_snake_case)] fn $constname() -> $consttype { $constdefault }
+                    $(#[$cattr])* #[allow(non_snake_case)] fn $constname() -> $consttype { $constdefault }
                 });
     };
     // parse-trait-nodefconst: parse a trait with a const (that has no default value) as the first declaration
@@ -94,22 +92,22 @@ macro_rules! guilty {
     //  - def-trait-fn/def-trait-attr/def-trait-ty if there are no more consts
     (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
-         const $constname:ident : $consttype:ty,
+         $(#[$cattr:meta])* const $constname:ident : $consttype:ty,
          $($body:tt)*
      }) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [$($before)+] [$($traitname)*],
                 {
                     $($body)*
-                    #[allow(non_snake_case)] fn $constname() -> $consttype;
+                    $(#[$cattr])* #[allow(non_snake_case)] fn $constname() -> $consttype;
                 });
     };
     // def-trait-fn: output a trait that has no consts at the beginning (starts with an unadorned fn)
     // indirection through item-redir
     (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
-         fn $($body:tt)*
+         $(#[$fattr:meta])* fn $($body:tt)*
      }) => {
-        guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { fn $($body)* });
+        guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { $(#[$fattr])* fn $($body)* });
     };
     // def-trait-attr: output a trait that has no consts at the beginning (starts with fn that has
     //    docs/attributes)
@@ -124,9 +122,15 @@ macro_rules! guilty {
     // indirection through item-redir
     (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
      {
-         type $($body:tt)*
+         $(#[$tattr:meta])* type $($body:tt)*
      }) => {
-        guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { type $($body)* });
+        guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { $(#[$tattr])* type $($body)* });
+    };
+    // def-trait-empty: output a trait that has no items
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
+     {
+     }) => {
+        guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { });
     };
 
     // parse-impl-const: parse an impl with a const as the first declaration
@@ -135,32 +139,37 @@ macro_rules! guilty {
     //  - def-impl-fn/def-impl-ty if there are no more consts
     (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
      {
-         const $constname:ident : $consttype:ty = $constvalue:expr,
+         $(#[$cattr:meta])* const $constname:ident : $consttype:ty = $constvalue:expr,
          $($body:tt)*
      }) => {
         guilty!(INTERNAL: DEFINE IMPL, $traitname, $structname,
                 {
                     $($body)*
-                    fn $constname() -> $consttype { $constvalue }
+                    $(#[$cattr])* #[allow(non_snake_case)] fn $constname() -> $consttype { $constvalue }
                 });
     };
     // def-impl-fn: output an impl that has no consts at the beginning (starts with fn)
     // indirection through item-redir
     (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
      {
-         fn $($body:tt)*
+         $(#[$fattr:meta])* fn $($body:tt)*
      }) => {
-        guilty!(INTERNAL: AS ITEM, impl $traitname for $structname { fn $($body)* });
+        guilty!(INTERNAL: AS ITEM, impl $traitname for $structname { $(#[$fattr])* fn $($body)* });
     };
     // def-impl-ty: output an impl that has no consts at the beginning (starts with type)
     // indirection through item-redir
     (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
      {
-         type $($body:tt)*
+         $(#[$tattr:meta])* type $($body:tt)*
      }) => {
-        guilty!(INTERNAL: AS ITEM, impl $traitname for $structname { type $($body)* });
+        guilty!(INTERNAL: AS ITEM, impl $traitname for $structname { $(#[$tattr])* type $($body)* });
     };
-    // FIXME: need another DEFINE IMPL that's like def-trait-attr?
+    // def-impl-empty: output an impl that has no items in it
+    (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
+     {
+     }) => {
+        guilty!(INTERNAL: AS ITEM, impl $traitname for $structname { });
+    };
 
     // access: access a const defined with this macro
     // For now, it just calls the function, since we turn consts into functions. In the future, it
@@ -174,6 +183,90 @@ macro_rules! guilty {
     // a perfectly good item. The solution (sometimes) is to redirect through a macro like this.
     (INTERNAL: AS ITEM, $i:item) => ($i)
 }
+
+#[cfg(test)]
+mod tests {
+    // some small tests
+    guilty! { trait Empty { } }
+    guilty! { trait JustFn { fn foo(&self); } }
+    guilty! { trait JustType { type Foo; } }
+    guilty! { trait JustConst { const FOO: (), } }
+    guilty! { trait DocFn { #[doc="bar"] fn foo(&self); } }
+    guilty! { trait DocType { #[doc="bar"] type Foo; } }
+    guilty! { trait DocConst { #[doc="bar"] const FOO: (), } }
+    struct Foo;
+    guilty! { impl Empty for Foo { } }
+    guilty! { impl JustFn for Foo { fn foo(&self) {} } }
+    guilty! { impl JustType for Foo { type Foo = (); } }
+    guilty! { impl JustConst for Foo { const FOO: () = (), } }
+    guilty! { impl DocFn for Foo { #[doc="bar"] fn foo(&self) {} } }
+    guilty! { impl DocType for Foo { #[doc="bar"] type Foo = (); } }
+    guilty! { impl DocConst for Foo { #[doc="bar"] const FOO: () = (), } }
+
+    #[test]
+    fn small() {
+        assert_eq!(guilty!(<Foo as JustConst>::FOO), ());
+        assert_eq!(guilty!(<Foo as DocConst>::FOO), ());
+    }
+
+
+    // bigger integration test
+
+    guilty! {
+        /// A trait for things that do stuff
+        trait Trait {
+            /// An associated const with a default
+            const WithDefault: i32 = 0,
+            /// An associated const without a default
+            const NoDefault: Self,
+
+            /// An associated type
+            type Type;
+
+            /// A method with a default impl
+            fn with_impl(&self) -> &Self { self }
+            /// A method without a default impl
+            fn no_impl(&self) -> &Self;
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct Struct { i: i32 }
+
+    guilty! {
+        impl Trait for Struct {
+            /// An associated const with a default
+            const WithDefault: i32 = 42,
+            /// An associated const without a default
+            const NoDefault: Self = Struct { i: 42 },
+            
+            /// An associated type
+            type Type = bool;
+
+            /// A method without a default impl
+            fn no_impl(&self) -> &Self { self }
+        }
+    }
+
+    #[test]
+    fn big() {
+        use std::any::TypeId;
+
+        let s = Struct { i: 42 };
+        println!("{}", s.i);
+        println!("{} {:?}", guilty!(Struct::WithDefault), guilty!(Struct::NoDefault));
+
+        assert_eq!(s.i,                                     42);
+        assert_eq!(s.with_impl(),                           &s);
+        assert_eq!(s.no_impl(),                             &s);
+        assert_eq!(TypeId::of::<<Struct as Trait>::Type>(), TypeId::of::<bool>());
+        assert_eq!(guilty!(Struct::WithDefault),            42);
+        assert_eq!(guilty!(Struct::NoDefault),              Struct { i: 42 });
+        assert_eq!(guilty!(<Struct as Trait>::WithDefault), 42);
+        assert_eq!(guilty!(<Struct as Trait>::NoDefault),   Struct { i: 42 });
+    }
+}
+
 
 /*
  * BEFORE
