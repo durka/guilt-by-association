@@ -34,13 +34,21 @@ macro_rules! guilty {
     ($(#[$attr:meta])* trait $traitname:ident : $parent:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [pub trait] [$traitname : $parent], $body);
     };
-    // 3. define a public trait
+    // 3a. define a public trait
     ($(#[$attr:meta])* pub trait $traitname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [pub trait] [$traitname], $body);
     };
-    // 4. define a public trait with inheritance
+    // 3b. define a public restricted trait
+    ($(#[$attr:meta])* pub $restr:tt trait $traitname:ident $body:tt) => {
+        guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [pub $restr trait] [$traitname], $body);
+    };
+    // 4a. define a public trait with inheritance
     ($(#[$attr:meta])* pub trait $traitname:ident : $parent:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [pub trait] [$traitname : $parent], $body);
+    };
+    // 4b. define a public restricted trait with inheritance
+    ($(#[$attr:meta])* pub $restr:tt trait $traitname:ident : $parent:ident $body:tt) => {
+        guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [pub $restr trait] [$traitname : $parent], $body);
     };
     // 5. implement a trait (public or private)
     (impl $traitname:ident for $structname:ident $body:tt) => {
@@ -72,7 +80,7 @@ macro_rules! guilty {
     //  - itself if there is another default-valued const
     //  - parse-trait-nodefconst if there is another const with no default value
     //  - def-trait-fn/def-trait-attr/def-trait-ty if there are no more consts
-    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:tt)+] [$($traitname:tt)*],
      {
          $(#[$cattr:meta])* const $constname:ident : $consttype:ty = $constdefault:expr;
          $($body:tt)*
@@ -88,7 +96,7 @@ macro_rules! guilty {
     //  - itself is there is another non-default-valued const
     //  - parse-trait-defconst if there is another default-valued const
     //  - def-trait-fn/def-trait-attr/def-trait-ty if there are no more consts
-    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:tt)+] [$($traitname:tt)*],
      {
          $(#[$cattr:meta])* const $constname:ident : $consttype:ty;
          $($body:tt)*
@@ -101,7 +109,7 @@ macro_rules! guilty {
     };
     // def-trait-fn: output a trait that has no consts at the beginning (starts with an unadorned fn)
     // indirection through item-redir
-    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:tt)+] [$($traitname:tt)*],
      {
          $(#[$fattr:meta])* fn $($body:tt)*
      }) => {
@@ -110,7 +118,7 @@ macro_rules! guilty {
     // def-trait-attr: output a trait that has no consts at the beginning (starts with fn that has
     //    docs/attributes)
     // indirection through item-redir
-    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:tt)+] [$($traitname:tt)*],
      {
          # $($body:tt)*
      }) => {
@@ -118,14 +126,14 @@ macro_rules! guilty {
     };
     // def-trait-ty: output a trait that has no consts at the beginning (starts with an associated type)
     // indirection through item-redir
-    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:tt)+] [$($traitname:tt)*],
      {
          $(#[$tattr:meta])* type $($body:tt)*
      }) => {
         guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { $(#[$tattr])* type $($body)* });
     };
     // def-trait-empty: output a trait that has no items
-    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:ident)+] [$($traitname:tt)*],
+    (INTERNAL: DEFINE TRAIT, [$(#[$attr:meta])*] [$($before:tt)+] [$($traitname:tt)*],
      {
      }) => {
         guilty!(INTERNAL: AS ITEM, $(#[$attr])* $($before)+ $($traitname)* { });
@@ -188,9 +196,9 @@ mod tests {
     guilty! { trait Empty { } }
     guilty! { trait JustFn { fn foo(&self); } }
     guilty! { trait JustType { type Foo; } }
-    guilty! { trait JustConst { const FOO: (); } }
+    guilty! { pub trait JustConst { const FOO: (); } }
     guilty! { trait DocFn { #[doc="bar"] fn foo(&self); } }
-    guilty! { trait DocType { #[doc="bar"] type Foo; } }
+    guilty! { pub(crate) trait DocType { #[doc="bar"] type Foo; } }
     guilty! { trait DocConst { #[doc="bar"] const FOO: (); } }
     struct Foo;
     guilty! { impl Empty for Foo { } }
@@ -263,6 +271,7 @@ mod tests {
         assert_eq!(guilty!(<Struct as Trait>::WithDefault), 42);
         assert_eq!(guilty!(<Struct as Trait>::NoDefault),   Struct { i: 42 });
     }
+
 }
 
 
