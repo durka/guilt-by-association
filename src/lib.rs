@@ -25,7 +25,7 @@
 #[macro_export]
 macro_rules! guilty {
     // These are the user facing invocations:
-    
+
     // 1. define a private trait
     ($(#[$attr:meta])* trait $traitname:ident $body:tt) => {
         guilty!(INTERNAL: DEFINE TRAIT, [$(#[$attr])*] [trait] [$traitname], $body);
@@ -143,7 +143,7 @@ macro_rules! guilty {
     // calls on to:
     //  - itself if there is another const
     //  - def-impl-fn/def-impl-ty if there are no more consts
-    (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
+    (INTERNAL: DEFINE IMPL, $traitname:path, $structname:ident,
      {
          $(#[$cattr:meta])* const $constname:ident : $consttype:ty = $constvalue:expr;
          $($body:tt)*
@@ -156,7 +156,7 @@ macro_rules! guilty {
     };
     // def-impl-fn: output an impl that has no consts at the beginning (starts with fn)
     // indirection through item-redir
-    (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
+    (INTERNAL: DEFINE IMPL, $traitname:path, $structname:ident,
      {
          $(#[$fattr:meta])* fn $($body:tt)*
      }) => {
@@ -164,14 +164,14 @@ macro_rules! guilty {
     };
     // def-impl-ty: output an impl that has no consts at the beginning (starts with type)
     // indirection through item-redir
-    (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
+    (INTERNAL: DEFINE IMPL, $traitname:path, $structname:ident,
      {
          $(#[$tattr:meta])* type $($body:tt)*
      }) => {
         guilty!(INTERNAL: AS ITEM, impl $traitname for $structname { $(#[$tattr])* type $($body)* });
     };
     // def-impl-empty: output an impl that has no items in it
-    (INTERNAL: DEFINE IMPL, $traitname:ty, $structname:ident,
+    (INTERNAL: DEFINE IMPL, $traitname:path, $structname:ident,
      {
      }) => {
         guilty!(INTERNAL: AS ITEM, impl $traitname for $structname { });
@@ -245,7 +245,7 @@ mod tests {
             const WithDefault: i32 = 42;
             /// An associated const without a default
             const NoDefault: Self = Struct { i: 42 };
-            
+
             /// An associated type
             type Type = bool;
 
